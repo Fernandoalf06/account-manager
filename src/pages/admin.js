@@ -95,6 +95,7 @@ function bindAdminEvents(container, accounts) {
         <div class="form-group"><label class="form-label">Password</label><input class="form-input" type="text" id="acc-password" placeholder="Password akun" /></div>
         <div class="form-group"><label class="form-label">Deskripsi Tambahan</label><input class="form-input" type="text" id="acc-desc" placeholder="Contoh: Edit video profesional" /></div>
         <div class="form-group"><label class="form-label">Catatan (Opsional)</label><input class="form-input" type="text" id="acc-cred" placeholder="Contoh: Jangan ubah profile" /></div>
+        <div class="form-group"><label class="form-label">Batas Waktu Premium (Opsional)</label><input class="form-input" type="date" id="acc-premium-expiry" /></div>
         <button type="submit" class="btn btn-primary">Simpan</button>
       </form>
     `);
@@ -110,6 +111,7 @@ function bindAdminEvents(container, accounts) {
         password: document.getElementById('acc-password').value.trim(),
         description: document.getElementById('acc-desc').value.trim(),
         credentials_note: document.getElementById('acc-cred').value.trim(),
+        premiumExpiryDate: document.getElementById('acc-premium-expiry').value || null,
       });
       closeModal();
       showToast('Akun berhasil ditambahkan! ✅', 'success');
@@ -141,6 +143,7 @@ function bindAdminEvents(container, accounts) {
           <div class="form-group"><label class="form-label">Password</label><input class="form-input" type="text" id="edit-password" value="${escapeHtml(acc.password || '')}" /></div>
           <div class="form-group"><label class="form-label">Deskripsi Tambahan</label><input class="form-input" type="text" id="edit-desc" value="${escapeHtml(acc.description || '')}" /></div>
           <div class="form-group"><label class="form-label">Catatan (Opsional)</label><input class="form-input" type="text" id="edit-cred" value="${escapeHtml(acc.credentials_note || '')}" /></div>
+          <div class="form-group"><label class="form-label">Batas Waktu Premium (Opsional)</label><input class="form-input" type="date" id="edit-premium-expiry" value="${acc.premium_expiry_date || ''}" /></div>
           <button type="submit" class="btn btn-primary">Simpan</button>
         </form>
       `);
@@ -156,6 +159,7 @@ function bindAdminEvents(container, accounts) {
           password: document.getElementById('edit-password').value.trim(),
           description: document.getElementById('edit-desc').value.trim(),
           credentials_note: document.getElementById('edit-cred').value.trim(),
+          premiumExpiryDate: document.getElementById('edit-premium-expiry').value || null,
         });
         closeModal(); showToast('Akun diperbarui! ✅', 'success');
         await renderAdmin(container);

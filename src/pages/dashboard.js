@@ -100,6 +100,19 @@ function renderAccountCard(account, user, idx, session, queue, userHasActiveSess
   const escapedAccDesc = escapeHtml(account.description || '');
   const escapedTaskDesc = session?.taskDescription ? escapeHtml(session.taskDescription) : '';
 
+  let premiumBadgeHtml = '';
+  if (account.premium_expiry_date) {
+    const expiryDate = new Date(account.premium_expiry_date);
+    const today = new Date();
+    const diffTime = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+    
+    if (diffTime <= 3) {
+      premiumBadgeHtml = `<div style="font-size:10px;font-weight:bold;color:#fff;background:var(--danger);padding:2px 6px;border-radius:4px;display:inline-block;margin-top:4px;">Premium Habis: ${diffTime > 0 ? diffTime + ' hari lagi' : 'Hari ini/Lewat'}</div>`;
+    } else if (diffTime <= 7) {
+      premiumBadgeHtml = `<div style="font-size:10px;font-weight:bold;color:#fff;background:var(--warning);padding:2px 6px;border-radius:4px;display:inline-block;margin-top:4px;color:#333;">Premium Habis: ${diffTime} hari lagi</div>`;
+    }
+  }
+
   return `
     <div class="card account-card account-card--${statusClass} animate-in" style="animation-delay:${idx * 0.08}s" data-account-id="${account.id}">
       <div class="account-header">
@@ -108,6 +121,7 @@ function renderAccountCard(account, user, idx, session, queue, userHasActiveSess
           <div>
             <div class="account-name">${escapedAccName}</div>
             <div class="account-desc">${escapedAccDesc}</div>
+            ${premiumBadgeHtml}
           </div>
         </div>
         <div class="status-badge status-badge--${session ? 'in-use' : myQueuePos ? 'queued' : 'available'}">

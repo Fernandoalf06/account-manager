@@ -155,6 +155,7 @@ export async function addAccount(account) {
     icon: account.icon || '📱',
     description: account.description || '',
     credentials_note: account.credentials_note || '',
+    premium_expiry_date: account.premiumExpiryDate || null,
   });
   return error ? { error: error.message } : { success: true };
 }
@@ -176,7 +177,12 @@ export async function removeAccount(id) {
 export async function editAccount(id, updates) {
   const sb = getSupabase();
   if (!sb) return;
-  await sb.from('shared_accounts').update(updates).eq('id', id);
+  const dbUpdates = { ...updates };
+  if (dbUpdates.premiumExpiryDate !== undefined) {
+    dbUpdates.premium_expiry_date = dbUpdates.premiumExpiryDate || null;
+    delete dbUpdates.premiumExpiryDate;
+  }
+  await sb.from('shared_accounts').update(dbUpdates).eq('id', id);
 }
 
 // ---- Sessions (Check In / Out) ----

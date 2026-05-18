@@ -1,5 +1,5 @@
 import { getHistory, formatDuration, formatTimeAgo } from '../lib/store.js';
-import { avatarHtml } from '../lib/ui.js';
+import { avatarHtml, escapeHtml } from '../lib/ui.js';
 
 export async function renderHistory(container) {
   container.innerHTML = `
@@ -33,8 +33,8 @@ export async function renderHistory(container) {
         <div class="history-item">
           ${avatarHtml(h.userName, h.userColor, 36)}
           <div class="history-details">
-            <div class="history-name">${h.userName}</div>
-            <div class="history-account">${h.accountIcon} ${h.accountName}${h.taskDescription ? ` — ${h.taskDescription}` : ''}</div>
+            <div class="history-name">${escapeHtml(h.userName)}</div>
+            <div class="history-account">${escapeHtml(h.accountIcon)} ${escapeHtml(h.accountName)}${h.taskDescription ? ` — ${escapeHtml(h.taskDescription)}` : ''}</div>
             <div class="history-time">${formatTimeAgo(h.checkedOutAt)}</div>
           </div>
           <div class="history-duration">${formatDuration(h.duration)}</div>

@@ -211,7 +211,7 @@ body {
 
 /* ========== MODAL ========== */
 .modal-overlay { position: fixed; inset: 0; z-index: 500; display: flex; align-items: flex-end; justify-content: center; }
-.modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
+.modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); transition: opacity .2s ease; }
 .modal-content {
   position: relative; width: 100%; max-width: 480px; max-height: 85dvh;
   background: var(--surface); border: 1px solid var(--border-hover);
@@ -280,6 +280,7 @@ body {
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 @keyframes loading { 0% { transform: translateX(-100%); } 100% { transform: translateX(350%); } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideDown-out { from { transform: translateY(0); opacity: 1; } to { transform: translateY(100%); opacity: 0; } }
 .animate-in { animation: fadeUp .4s ease-out both; }
 
 /* ========== RESPONSIVE ========== */

@@ -55,8 +55,13 @@ export function getCurrentUser() {
 }
 
 export async function login(name, pin) {
-  const teamPin = import.meta.env.VITE_TEAM_PIN || '1234';
-  if (pin !== teamPin) return { error: 'PIN salah! Hubungi admin untuk PIN yang benar.' };
+  const adminPin = import.meta.env.VITE_ADMIN_PIN || '8888';
+  const memberPin = import.meta.env.VITE_MEMBER_PIN || '1234';
+  
+  let role = '';
+  if (pin === adminPin) role = 'admin';
+  else if (pin === memberPin) role = 'member';
+  else return { error: 'PIN salah! Masukkan PIN Admin atau Member yang benar.' };
 
   const sb = getSupabase();
   if (!sb) return { error: 'Supabase belum dikonfigurasi. Periksa file .env Anda.' };
@@ -71,16 +76,13 @@ export async function login(name, pin) {
     let member;
     if (existing && existing.length > 0) {
       member = existing[0];
+      // Sync role if they log in with a different PIN level, and reactivate if deleted
+      if (member.role !== role || member.is_active === false) {
+        await sb.from('members').update({ role, is_active: true }).eq('id', member.id);
+        member.role = role;
+      }
     } else {
-      // Check if this is the first member (will be admin)
-      const { count, error: countErr } = await sb
-        .from('members').select('*', { count: 'exact', head: true });
-
-      if (countErr) return { error: 'Gagal mengecek anggota: ' + countErr.message };
-
-      const role = count === 0 ? 'admin' : 'member';
       const color = generateColor(name);
-
       const { data, error } = await sb.from('members').insert({
         name: name.trim(), role, color
       }).select().single();
@@ -160,9 +162,14 @@ export async function addAccount(account) {
 export async function removeAccount(id) {
   const sb = getSupabase();
   if (!sb) return;
-  // Clean up related sessions and queue entries first
+  // Clean up related queue entries first
   await sb.from('queue').delete().eq('account_id', id);
-  await sb.from('sessions').delete().eq('account_id', id).eq('status', 'active');
+  // Complete active sessions instead of deleting (preserves history)
+  await sb.from('sessions').update({
+    status: 'completed',
+    checked_out_at: new Date().toISOString(),
+  }).eq('account_id', id).eq('status', 'active');
+  // Soft-delete the account
   await sb.from('shared_accounts').update({ is_active: false }).eq('id', id);
 }
 
@@ -189,6 +196,7 @@ export async function getActiveSession(accountId) {
     userName: data.members?.name || 'Unknown',
     userColor: data.members?.color || '#6366f1',
     checkedInAt: data.checked_in_at,
+    expectedCheckoutAt: data.expected_checkout_at,
     taskDescription: data.task_description,
     status: data.status,
   };
@@ -196,22 +204,23 @@ export async function getActiveSession(accountId) {
 
 export async function getUserActiveSession(userId) {
   const sb = getSupabase();
-  if (!sb) return null;
+  if (!sb) return [];
   const { data } = await sb.from('sessions')
-    .select('*').eq('user_id', userId).eq('status', 'active')
-    .limit(1).maybeSingle();
-  return data ? { id: data.id, accountId: data.account_id } : null;
+    .select('*').eq('user_id', userId).eq('status', 'active');
+  return data || [];
 }
 
-export async function checkIn(accountId, taskDescription) {
+export async function checkIn(accountId, expectedCheckoutAt) {
   const user = getCurrentUser();
   if (!user) return { error: 'Anda belum login.' };
   const sb = getSupabase();
   if (!sb) return { error: 'Supabase belum terhubung.' };
 
-  // Check if user already has an active session
-  const existingSession = await getUserActiveSession(user.id);
-  if (existingSession) return { error: 'Anda sudah sedang menggunakan akun lain. Check out dulu!' };
+  // Check if user already has an active session ON THIS account
+  const { data: mySession } = await sb.from('sessions')
+    .select('id').eq('account_id', accountId).eq('user_id', user.id).eq('status', 'active')
+    .maybeSingle();
+  if (mySession) return { error: 'Anda sudah menggunakan akun ini.' };
 
   // Check if account is already in use
   const activeSession = await getActiveSession(accountId);
@@ -220,8 +229,9 @@ export async function checkIn(accountId, taskDescription) {
   const { data, error } = await sb.from('sessions').insert({
     account_id: accountId,
     user_id: user.id,
-    task_description: taskDescription || '',
+    task_description: '',
     status: 'active',
+    expected_checkout_at: expectedCheckoutAt
   }).select().single();
 
   if (error) return { error: 'Gagal check in: ' + error.message };
@@ -230,6 +240,27 @@ export async function checkIn(accountId, taskDescription) {
   await sb.from('queue').delete().eq('account_id', accountId).eq('user_id', user.id);
 
   return { session: data };
+}
+
+export async function extendSession(sessionId, extraMinutes) {
+  const sb = getSupabase();
+  if (!sb) return { error: 'Supabase belum terhubung.' };
+  
+  const { data: session } = await sb.from('sessions').select('expected_checkout_at').eq('id', sessionId).maybeSingle();
+  if (!session) return { error: 'Sesi tidak ditemukan.' };
+  
+  let currentExpected = session.expected_checkout_at ? new Date(session.expected_checkout_at) : new Date();
+  if (currentExpected.getTime() < Date.now()) {
+    currentExpected = new Date(); // If already overtime, add time from NOW
+  }
+  
+  const newExpected = new Date(currentExpected.getTime() + extraMinutes * 60000);
+  
+  const { error } = await sb.from('sessions').update({
+    expected_checkout_at: newExpected.toISOString()
+  }).eq('id', sessionId);
+  
+  return error ? { error: error.message } : { success: true };
 }
 
 export async function checkOut(sessionId) {
@@ -380,7 +411,7 @@ export async function getHistory(limit = 50) {
 export async function getMembers() {
   const sb = getSupabase();
   if (!sb) return [];
-  const { data } = await sb.from('members').select('*').order('created_at');
+  const { data } = await sb.from('members').select('*').eq('is_active', true).order('created_at');
   return data || [];
 }
 
@@ -394,8 +425,22 @@ export async function removeMember(id) {
     status: 'completed',
     checked_out_at: new Date().toISOString(),
   }).eq('user_id', id).eq('status', 'active');
-  // Now safe to delete member
-  await sb.from('members').delete().eq('id', id);
+  // Soft delete member to preserve history
+  await sb.from('members').update({ is_active: false }).eq('id', id);
+}
+
+export async function editMember(id, updates) {
+  const sb = getSupabase();
+  if (!sb) return;
+  await sb.from('members').update(updates).eq('id', id);
+  
+  // Sync if it's the current user
+  const curr = getCurrentUser();
+  if (curr && curr.id === id) {
+    if (updates.name) curr.name = updates.name;
+    if (updates.role) curr.role = updates.role;
+    localStorage.setItem(USER_KEY, JSON.stringify(curr));
+  }
 }
 
 // ---- Helpers ----

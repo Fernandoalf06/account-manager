@@ -21,15 +21,15 @@ export function renderLogin(container, onSuccess) {
           <input class="form-input" type="text" id="login-name" placeholder="Contoh: Fernando" required autocomplete="name" />
         </div>
         <div class="form-group">
-          <label class="form-label" for="login-pin">PIN Tim</label>
-          <input class="form-input" type="password" id="login-pin" placeholder="Masukkan PIN dari admin" required inputmode="numeric" maxlength="8" />
+          <label class="form-label" for="login-pin">PIN Akses</label>
+          <input class="form-input" type="password" id="login-pin" placeholder="Masukkan PIN Member atau Admin" required inputmode="numeric" maxlength="8" />
         </div>
         <button type="submit" class="btn btn-primary" id="login-btn" style="margin-top:8px;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
           Masuk
         </button>
         <p style="text-align:center;margin-top:16px;font-size:12px;color:var(--text-3);">
-          Orang pertama yang login akan menjadi Admin
+          Gunakan PIN Admin untuk akses kelola akun
         </p>
       </form>
     </div>

@@ -151,6 +151,7 @@ function setupNavigation() {
   // Logout
   document.getElementById('btn-logout').addEventListener('click', async () => {
     document.getElementById('dropdown-menu').style.display = 'none';
+    destroyDashboard(); // Clean up dashboard timer before logout
     await logout();
     currentUser = null;
     if (unsubscribe) { unsubscribe(); unsubscribe = null; }
